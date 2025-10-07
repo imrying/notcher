@@ -3,9 +3,9 @@ import Cocoa
 // MARK: - Mouse tracking + popup coordination
 @MainActor
 class MouseTracker {
-    private var eventMonitor: Any?
-    private var localEventMonitor: Any?
-    private var timer: Timer?
+    nonisolated(unsafe) private var eventMonitor: Any?
+    nonisolated(unsafe) private var localEventMonitor: Any?
+    nonisolated(unsafe) private var timer: Timer?
     private var notchRect: NSRect?
     private var wasInsideNotch = false
 
@@ -46,15 +46,21 @@ class MouseTracker {
 
     private func startTracking() {
         eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved) { [weak self] _ in
-            self?.checkMousePosition()
+            Task { @MainActor in
+                self?.checkMousePosition()
+            }
         }
         localEventMonitor = NSEvent.addLocalMonitorForEvents(matching: .mouseMoved) {
             [weak self] event in
-            self?.checkMousePosition()
+            Task { @MainActor in
+                self?.checkMousePosition()
+            }
             return event
         }
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
-            self?.checkMousePosition()
+            Task { @MainActor in
+                self?.checkMousePosition()
+            }
         }
         print("Mouse tracking started (global monitor, local monitor, and timer)")
     }
@@ -129,6 +135,7 @@ class MouseTracker {
 
 // MARK: - App entry (unchanged except for keeping MouseTracker alive)
 @_cdecl("show_status_item")
+@MainActor
 public func show_status_item() {
     print("Starting notcher application...")
 
