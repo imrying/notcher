@@ -12,8 +12,8 @@ func get_files_from_notch() -> StringArray
 @_silgen_name("free_string_array")
 func free_string_array(_ arr: StringArray)
 
-@_silgen_name("init_notch_path")
-func init_notch_path() -> Bool
+@_silgen_name("init_notch")
+func init_notch() -> Bool
 
 // MARK: - Mouse tracking + popup coordination
 @MainActor
@@ -110,17 +110,17 @@ class MouseTracker {
         helloPanel?.setFrame(frame, display: true)
         helloPanel?.orderFrontRegardless()  // non-activating
     }
-    
+
     private func getFilesFromNotch() -> [String] {
 
         print("CALLING GET FILES IN SWIFT")
         let arr = get_files_from_notch()
         defer { free_string_array(arr) }
-        
+
         guard let data = arr.data, arr.len > 0 else {
             return []
         }
-        
+
         var files: [String] = []
         for i in 0..<arr.len {
             if let cString = data[i] {
@@ -212,7 +212,7 @@ public func show_status_item() {
 
     print("Starting application run loop...")
     print("Calling init_notch")
-    assert(init_notch_path(), "Setting notch path failed")
+    assert(init_notch(), "Setting notch path failed")
 
     app.run()
 }

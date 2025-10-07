@@ -44,7 +44,7 @@ fn get_files(path: PathBuf) -> Vec<String> {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn init_notch_path() -> bool {
+pub extern "C" fn init_notch() -> bool {
     let path = create_or_get_dir(TMP_FOLDER_NAME, NOTCH_FOLDER);
     let _ = NOTCH_PATH.set(path);
     NOTCH_PATH.get().is_some()

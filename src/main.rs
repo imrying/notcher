@@ -5,8 +5,6 @@ unsafe extern "C" {
 }
 
 fn main() {
-    files::init_notch_path();
-
     unsafe {
         show_status_item();
     }
