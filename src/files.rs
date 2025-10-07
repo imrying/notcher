@@ -28,7 +28,6 @@ fn create_or_get_dir(tmp_folder: &'static str, notch_folder: &'static str) -> Pa
 fn get_files(path: PathBuf) -> Vec<String> {
     let mut files = Vec::new();
 
-    println!("WOWOWOWWOWO");
     if let Ok(entries) = read_dir(path) {
         for entry in entries.flatten() {
             let path = entry.path();
@@ -41,8 +40,6 @@ fn get_files(path: PathBuf) -> Vec<String> {
             }
         }
     }
-    println!("wowo {:?}", files);
-
     files
 }
 
