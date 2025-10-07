@@ -1,6 +1,7 @@
 import Cocoa
 
 // MARK: - Mouse tracking + popup coordination
+@MainActor
 class MouseTracker {
     private var eventMonitor: Any?
     private var localEventMonitor: Any?
@@ -47,7 +48,8 @@ class MouseTracker {
         eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved) { [weak self] _ in
             self?.checkMousePosition()
         }
-        localEventMonitor = NSEvent.addLocalMonitorForEvents(matching: .mouseMoved) { [weak self] event in
+        localEventMonitor = NSEvent.addLocalMonitorForEvents(matching: .mouseMoved) {
+            [weak self] event in
             self?.checkMousePosition()
             return event
         }
@@ -78,7 +80,7 @@ class MouseTracker {
             helloPanel = HelloPanel(frame: frame, message: "Hello World")
         }
         helloPanel?.setFrame(frame, display: true)
-        helloPanel?.orderFrontRegardless() // non-activating
+        helloPanel?.orderFrontRegardless()  // non-activating
     }
 
     private func hideHelloPanel() {
@@ -148,11 +150,12 @@ public func show_status_item() {
     }
 
     let menu = NSMenu()
-    menu.addItem(NSMenuItem(
-        title: "Quit",
-        action: #selector(NSApplication.terminate(_:)),
-        keyEquivalent: "q"
-    ))
+    menu.addItem(
+        NSMenuItem(
+            title: "Quit",
+            action: #selector(NSApplication.terminate(_:)),
+            keyEquivalent: "q"
+        ))
     statusItem.menu = menu
     print("Menu created and attached to status item")
 
