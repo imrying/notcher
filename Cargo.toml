@@ -10,6 +10,6 @@ crate-type = ["staticlib"]
 
 [[bin]]
 name = "notcher"
-path = "src/main.rs"
+path = "src/lib.rs"
 
 [dependencies]
