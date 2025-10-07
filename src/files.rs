@@ -65,7 +65,7 @@ pub fn create_or_get_dir(tmp_folder: &str, notch_folder: &str) -> Result<PathBuf
     Ok(notch_path)
 }
 
-pub fn get_notch_path() -> Result<PathBuf, ()> {
+pub fn get_notch_path_rs() -> Result<PathBuf, ()> {
     if let Some(path) = NOTCH_PATH.get() {
         return Ok(path.to_path_buf());
     }

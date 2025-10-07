@@ -1,63 +1,38 @@
-use crate::files::{create_or_get_default_dir, create_or_get_dir, get_files};
+use crate::{
+    ffi_structs::{FFIResult, FFiErrorCodes, StringArray},
+    files::{create_or_get_default_dir, create_or_get_dir, get_files, get_notch_path_rs},
+};
 use core::ffi::c_char;
+use std::ffi::CString;
 
 #[unsafe(no_mangle)]
-pub extern "C" fn init_notch() -> bool {
-    if let Ok(path) = create_or_get_default_dir() {
-        return true;
+pub extern "C" fn init_notch() -> FFIResult<()> {
+    if let Ok(_) = create_or_get_default_dir() {
+        return FFIResult::new(std::ptr::null_mut(), FFiErrorCodes::Ok);
     }
-    false
+    return FFIResult::new(std::ptr::null_mut(), FFiErrorCodes::Error);
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn get_notch_path() -> *const c_char {
-    use std::ffi::CString;
-    let s = NOTCH_PATH.get().unwrap().to_str().unwrap();
-
-    let c_string = CString::new(s).unwrap();
-    c_string.into_raw()
+pub extern "C" fn get_notch_path() -> FFIResult<c_char> {
+    if let Ok(path) = get_notch_path_rs() {
+        let c_string = CString::new(path.to_str().unwrap()).unwrap(); // TODO: handle more nicely
+        return FFIResult::new(c_string.into_raw(), FFiErrorCodes::Ok);
+    } else {
+        return FFIResult::new(std::ptr::null_mut(), FFiErrorCodes::Error);
+    }
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn get_files_from_notch() -> StringArray {
+pub extern "C" fn get_files_from_notch() -> FFIResult<StringArray> {
     use std::ffi::CString;
+    if let Ok(path) = get_notch_path_rs() {
+        let files = get_files(path.to_path_buf());
+        let sa = StringArray::from(files);
 
-    // println!("NOTCH PATH: {:?}", NOTCH_PATH);
-    // init_notch_path();
-
-    let path = match NOTCH_PATH.get() {
-        Some(p) => p,
-        None => {
-            println!("NO NOTCH PATH SET");
-            return StringArray {
-                data: std::ptr::null_mut(),
-                len: 0,
-            };
-        }
-    };
-
-    let files = get_files(path.to_path_buf());
-    let mut cstrings: Vec<CString> = files
-        .into_iter()
-        .filter_map(|s| CString::new(s).ok())
-        .collect();
-
-    // Build array of char* and leak them to C; provide a free function below.
-    let mut ptrs: Vec<*mut c_char> = cstrings
-        .iter_mut()
-        .map(|s| s.as_ptr() as *mut c_char)
-        .collect();
-
-    // Prevent Rust from freeing the CStrings; C will free via free_string_array.
-    std::mem::forget(cstrings);
-
-    let data_ptr = ptrs.as_mut_ptr();
-    let len = ptrs.len();
-    std::mem::forget(ptrs);
-
-    StringArray {
-        data: data_ptr,
-        len,
+        return FFIResult::new(&sa, FFiErrorCodes::Error);
+    } else {
+        return FFIResult::new(std::ptr::null_mut(), FFiErrorCodes::Error);
     }
 }
 

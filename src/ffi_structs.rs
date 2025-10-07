@@ -42,3 +42,21 @@ impl From<FileArray> for StringArray {
         StringArray::new(data_ptr, len)
     }
 }
+
+#[repr(C)]
+pub enum FFiErrorCodes {
+    Ok = 0,
+    Error = 1,
+}
+
+#[repr(C)]
+pub struct FFIResult<T> {
+    result: *mut T,
+    error: FFiErrorCodes,
+}
+
+impl<T> FFIResult<T> {
+    pub fn new(res: *mut T, error: FFiErrorCodes) -> Self {
+        FFIResult { result: res, error }
+    }
+}
