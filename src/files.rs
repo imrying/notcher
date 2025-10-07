@@ -57,6 +57,15 @@ pub struct StringArray {
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn get_notch_path() -> *const c_char {
+    use std::ffi::CString;
+    let s = NOTCH_PATH.get().unwrap().to_str().unwrap();
+
+    let c_string = CString::new(s).unwrap();
+    c_string.into_raw()
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn get_files_from_notch() -> StringArray {
     use std::ffi::CString;
 
