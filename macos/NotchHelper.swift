@@ -1,108 +1,194 @@
 import Cocoa
 
+final class HelloPanel: NSPanel {
+    init(frame: NSRect, message: String) {
+        super.init(
+            contentRect: frame,
+            styleMask: [.nonactivatingPanel, .borderless],
+            backing: .buffered,
+            defer: false
+        )
+        isFloatingPanel = true
+        level = .statusBar
+        hasShadow = true
+        isOpaque = false
+        backgroundColor = .clear
+        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        hidesOnDeactivate = false
+        worksWhenModal = true
+        becomesKeyOnlyIfNeeded = false
+
+        // Use a view sized to the panel (windows don't have `bounds`)
+        let effectFrame = NSRect(origin: .zero, size: frame.size)
+        let effect = NSVisualEffectView(frame: effectFrame)
+        effect.material = NSVisualEffectView.Material.hudWindow   // explicit type
+        effect.state = NSVisualEffectView.State.active            // explicit type
+        effect.wantsLayer = true
+        effect.layer?.cornerRadius = 12
+        effect.layer?.masksToBounds = true
+        effect.autoresizingMask = [.width, .height]
+
+        let label = NSTextField(labelWithString: message)
+        label.font = .systemFont(ofSize: 14, weight: .semibold)
+        label.alignment = .center
+        label.translatesAutoresizingMaskIntoConstraints = false
+
+        effect.addSubview(label)
+        contentView = effect
+
+        // Constrain label after contentView is set
+        NSLayoutConstraint.activate([
+            label.centerXAnchor.constraint(equalTo: effect.centerXAnchor),
+            label.centerYAnchor.constraint(equalTo: effect.centerYAnchor),
+            effect.widthAnchor.constraint(greaterThanOrEqualTo: label.widthAnchor, constant: 24),
+            effect.heightAnchor.constraint(greaterThanOrEqualTo: label.heightAnchor, constant: 16)
+        ])
+
+        preventsApplicationTerminationWhenModal = false
+    }
+}
+
+
+// MARK: - Mouse tracking + popup coordination
 class MouseTracker {
     private var eventMonitor: Any?
     private var localEventMonitor: Any?
     private var timer: Timer?
     private var notchRect: NSRect?
     private var wasInsideNotch = false
-    
+
+    // popup
+    private var helloPanel: HelloPanel?
+
+    // Tunables
+    private let panelSize = NSSize(width: 160, height: 48)
+    private let panelGap: CGFloat = 8
+
     init() {
         calculateNotchRect()
         startTracking()
     }
-    
+
     private func calculateNotchRect() {
         guard let screen = NSScreen.main else { return }
-        
-        // Get the safe area insets which indicate the notch area
+
         if #available(macOS 12.0, *) {
             let safeAreaInsets = screen.safeAreaInsets
-            
-            // If there's a top inset, we have a notch
+
             if safeAreaInsets.top > 0 {
                 let screenFrame = screen.frame
-                // The notch is centered at the top of the screen
-                // Typical notch width is around 200-300 pixels
+                // Approximate notch width; centered at the top
                 let notchWidth: CGFloat = 200
                 let notchHeight = safeAreaInsets.top
-                
+
                 let notchX = (screenFrame.width - notchWidth) / 2
                 let notchY = screenFrame.height - notchHeight
-                
+
                 notchRect = NSRect(x: notchX, y: notchY, width: notchWidth, height: notchHeight)
-                
                 print("Notch detected at: \(notchRect!)")
             } else {
                 print("No notch detected on this display")
             }
         }
     }
-    
+
     private func startTracking() {
-        // Try to add global monitor (may require accessibility permissions)
-        eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved) { [weak self] event in
+        eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved) { [weak self] _ in
             self?.checkMousePosition()
         }
-        
-        // Also add local monitor for events within the app
         localEventMonitor = NSEvent.addLocalMonitorForEvents(matching: .mouseMoved) { [weak self] event in
             self?.checkMousePosition()
             return event
         }
-        
-        // Use a timer as a fallback to poll mouse position
-        // This works even without accessibility permissions
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             self?.checkMousePosition()
         }
-        
         print("Mouse tracking started (global monitor, local monitor, and timer)")
     }
-    
+
+    // Compute a rect centered under the notch for the panel
+    private func panelFrameBelowNotch() -> NSRect? {
+        guard let screen = NSScreen.main, let notchRect = notchRect else { return nil }
+        let width = panelSize.width
+        let height = panelSize.height
+
+        var x = notchRect.midX - width / 2
+        // keep within screen horizontally
+        x = max(screen.frame.minX + 8, min(x, screen.frame.maxX - width - 8))
+
+        let y = notchRect.minY - height - panelGap
+        return NSRect(x: x, y: y, width: width, height: height)
+    }
+
+    private func showHelloPanel() {
+        guard let frame = panelFrameBelowNotch() else { return }
+
+        if helloPanel == nil {
+            helloPanel = HelloPanel(frame: frame, message: "Hello World")
+        }
+        helloPanel?.setFrame(frame, display: true)
+        helloPanel?.orderFrontRegardless() // non-activating
+    }
+
+    private func hideHelloPanel() {
+        helloPanel?.orderOut(nil)
+    }
+
+    private func isMouseInsidePanel(_ mouseLocation: NSPoint) -> Bool {
+        guard let panel = helloPanel, panel.isVisible else { return false }
+        return panel.frame.contains(mouseLocation)
+    }
+
     private func checkMousePosition() {
         guard let notchRect = notchRect else { return }
-        
+
         let mouseLocation = NSEvent.mouseLocation
-        let isInside = notchRect.contains(mouseLocation)
-        
-        // Only print when mouse enters the notch (not continuously)
-        if isInside && !wasInsideNotch {
+        let insideNotch = notchRect.contains(mouseLocation)
+        let insidePanel = isMouseInsidePanel(mouseLocation)
+
+        // Show on first notch entry
+        if insideNotch && !wasInsideNotch {
             print("Hello World")
+            showHelloPanel()
             wasInsideNotch = true
-        } else if !isInside && wasInsideNotch {
+            return
+        }
+
+        // Track whether we're still in the notch
+        if insideNotch {
+            wasInsideNotch = true
+            return
+        }
+
+        // If not in notch, keep the panel open only while mouse is within the panel
+        if !insideNotch && !insidePanel {
+            hideHelloPanel()
             wasInsideNotch = false
         }
     }
-    
+
     deinit {
-        if let monitor = eventMonitor {
-            NSEvent.removeMonitor(monitor)
-        }
-        if let monitor = localEventMonitor {
-            NSEvent.removeMonitor(monitor)
-        }
+        if let monitor = eventMonitor { NSEvent.removeMonitor(monitor) }
+        if let monitor = localEventMonitor { NSEvent.removeMonitor(monitor) }
         timer?.invalidate()
     }
 }
 
+// MARK: - App entry (unchanged except for keeping MouseTracker alive)
 @_cdecl("show_status_item")
 public func show_status_item() {
     print("Starting notcher application...")
-    
+
     let app = NSApplication.shared
     app.setActivationPolicy(.accessory)
-    
     print("Application activation policy set to .accessory")
-    
-    // Activate the application to make it responsive
+
     app.activate(ignoringOtherApps: true)
-    
     print("Application activated")
 
     let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     print("Status item created: \(statusItem)")
-    
+
     if let button = statusItem.button {
         button.title = "Notch"
         print("Button title set to 'Notch'")
@@ -117,17 +203,11 @@ public func show_status_item() {
         keyEquivalent: "q"
     ))
     statusItem.menu = menu
-    
     print("Menu created and attached to status item")
-    
-    // Initialize mouse tracker
-    let mouseTracker = MouseTracker()
-    
-    // Keep a strong reference to prevent deallocation
-    objc_setAssociatedObject(app, "mouseTracker", mouseTracker, .OBJC_ASSOCIATION_RETAIN)
-    
-    print("Starting application run loop...")
 
+    let mouseTracker = MouseTracker()
+    objc_setAssociatedObject(app, "mouseTracker", mouseTracker, .OBJC_ASSOCIATION_RETAIN)
+
+    print("Starting application run loop...")
     app.run()
 }
-
