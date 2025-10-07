@@ -13,7 +13,7 @@
 #   make SWIFT_EXTRA_FLAGS="-target arm64-apple-macos12.0"
 
 APP_NAME := notcher
-SWIFT_SRCS := macos/NotchHelper.swift
+SWIFT_SRCS := macos/Panel.swift macos/NotchHelper.swift
 DYLIB := macos/libNotchHelper.dylib
 
 # Reasonable default; override on invocation if needed.
