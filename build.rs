@@ -1,6 +1,9 @@
 use std::path::Path;
 
 fn main() {
+    // Always emit link directives - they'll only be used by the binary target
+    // The library target (staticlib/cdylib) doesn't link to Swift
+    
     // Path to Swift-built .dylib
     println!(
         "cargo:rustc-link-search=native={}",

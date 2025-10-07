@@ -4,4 +4,12 @@ version = "0.1.0"
 edition = "2024"
 build = "build.rs"
 
+[lib]
+name = "notcher_files"
+crate-type = ["staticlib"]
+
+[[bin]]
+name = "notcher"
+path = "src/main.rs"
+
 [dependencies]

@@ -20,17 +20,27 @@ CARGO := cargo
 
 .PHONY: all swift rust run clean
 
-all: swift rust
+all: rust-bin
 
-# Build Swift Package
-swift:
+# Build Rust static library
+rust-lib:
+	@echo "Building Rust static library"
+	$(CARGO) build --lib
+
+# Build Swift Package (depends on Rust library)
+swift: rust-lib
 	@echo "Building Swift package → $(DYLIB)"
 	MACOSX_DEPLOYMENT_TARGET=$(MACOSX_DEPLOYMENT_TARGET) \
 	swift build $(SWIFT_EXTRA_FLAGS) \
 	--product NotchHelper
 
-rust:
-	$(CARGO) build
+# Build Rust binary (depends on Swift dylib)
+rust-bin: swift
+	@echo "Building Rust binary"
+	$(CARGO) build --bin $(APP_NAME)
+
+# Legacy target for compatibility
+rust: rust-bin
 
 run: all
 	DYLD_LIBRARY_PATH=.build/debug target/debug/$(APP_NAME)

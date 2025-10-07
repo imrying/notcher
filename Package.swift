@@ -20,7 +20,11 @@ let package = Package(
         .target(
             name: "notcher",
             dependencies: [],
-            path: "Sources/notcher"
+            path: "Sources/notcher",
+            linkerSettings: [
+                .unsafeFlags(["-L", "target/debug"]),
+                .linkedLibrary("notcher_files")
+            ]
         )
     ]
 )

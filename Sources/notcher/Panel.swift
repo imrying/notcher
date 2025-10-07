@@ -29,8 +29,10 @@ final public class HelloPanel: NSPanel {
         effect.autoresizingMask = [.width, .height]
 
         let label = NSTextField(labelWithString: message)
-        label.font = .systemFont(ofSize: 14, weight: .semibold)
-        label.alignment = .center
+        label.font = .systemFont(ofSize: 12, weight: .regular)
+        label.alignment = .left
+        label.lineBreakMode = .byTruncatingTail
+        label.maximumNumberOfLines = 10
         label.translatesAutoresizingMaskIntoConstraints = false
 
         effect.addSubview(label)
@@ -38,10 +40,10 @@ final public class HelloPanel: NSPanel {
 
         // Constrain label after contentView is set
         NSLayoutConstraint.activate([
-            label.centerXAnchor.constraint(equalTo: effect.centerXAnchor),
-            label.centerYAnchor.constraint(equalTo: effect.centerYAnchor),
-            effect.widthAnchor.constraint(greaterThanOrEqualTo: label.widthAnchor, constant: 24),
-            effect.heightAnchor.constraint(greaterThanOrEqualTo: label.heightAnchor, constant: 16),
+            label.leadingAnchor.constraint(equalTo: effect.leadingAnchor, constant: 12),
+            label.trailingAnchor.constraint(equalTo: effect.trailingAnchor, constant: -12),
+            label.topAnchor.constraint(equalTo: effect.topAnchor, constant: 8),
+            label.bottomAnchor.constraint(equalTo: effect.bottomAnchor, constant: -8),
         ])
 
         preventsApplicationTerminationWhenModal = false

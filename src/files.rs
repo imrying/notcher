@@ -28,6 +28,7 @@ fn create_or_get_dir(tmp_folder: &'static str, notch_folder: &'static str) -> Pa
 fn get_files(path: PathBuf) -> Vec<String> {
     let mut files = Vec::new();
 
+    println!("WOWOWOWWOWO");
     if let Ok(entries) = read_dir(path) {
         for entry in entries.flatten() {
             let path = entry.path();
@@ -40,11 +41,13 @@ fn get_files(path: PathBuf) -> Vec<String> {
             }
         }
     }
+    println!("wowo {:?}", files);
 
     files
 }
 
-pub fn init_notch_path() -> bool {
+#[unsafe(no_mangle)]
+pub extern "C" fn init_notch_path() -> bool {
     let path = create_or_get_dir(TMP_FOLDER_NAME, NOTCH_FOLDER);
     let _ = NOTCH_PATH.set(path);
     NOTCH_PATH.get().is_some()
@@ -60,9 +63,13 @@ pub struct StringArray {
 pub extern "C" fn get_files_from_notch() -> StringArray {
     use std::ffi::CString;
 
+    // println!("NOTCH PATH: {:?}", NOTCH_PATH);
+    // init_notch_path();
+
     let path = match NOTCH_PATH.get() {
         Some(p) => p,
         None => {
+            println!("NO NOTCH PATH SET");
             return StringArray {
                 data: std::ptr::null_mut(),
                 len: 0,

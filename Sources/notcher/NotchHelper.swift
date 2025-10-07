@@ -1,5 +1,20 @@
 import Cocoa
 
+// MARK: - Rust FFI
+struct StringArray {
+    var data: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+    var len: Int
+}
+
+@_silgen_name("get_files_from_notch")
+func get_files_from_notch() -> StringArray
+
+@_silgen_name("free_string_array")
+func free_string_array(_ arr: StringArray)
+
+@_silgen_name("init_notch_path")
+func init_notch_path() -> Bool
+
 // MARK: - Mouse tracking + popup coordination
 @MainActor
 class MouseTracker {
@@ -13,7 +28,7 @@ class MouseTracker {
     private var helloPanel: HelloPanel?
 
     // Tunables
-    private let panelSize = NSSize(width: 160, height: 48)
+    private let panelSize = NSSize(width: 200, height: 150)
     private let panelGap: CGFloat = 8
 
     init() {
@@ -82,11 +97,37 @@ class MouseTracker {
     private func showHelloPanel() {
         guard let frame = panelFrameBelowNotch() else { return }
 
+        // Get files from Rust
+        let files = getFilesFromNotch()
+        let message = files.isEmpty ? "No files in notch" : files.joined(separator: "\n")
+
         if helloPanel == nil {
-            helloPanel = HelloPanel(frame: frame, message: "Hello World")
+            helloPanel = HelloPanel(frame: frame, message: message)
+        } else {
+            // Update the message if panel already exists
+            helloPanel = HelloPanel(frame: frame, message: message)
         }
         helloPanel?.setFrame(frame, display: true)
         helloPanel?.orderFrontRegardless()  // non-activating
+    }
+    
+    private func getFilesFromNotch() -> [String] {
+
+        print("CALLING GET FILES IN SWIFT")
+        let arr = get_files_from_notch()
+        defer { free_string_array(arr) }
+        
+        guard let data = arr.data, arr.len > 0 else {
+            return []
+        }
+        
+        var files: [String] = []
+        for i in 0..<arr.len {
+            if let cString = data[i] {
+                files.append(String(cString: cString))
+            }
+        }
+        return files
     }
 
     private func hideHelloPanel() {
@@ -170,5 +211,8 @@ public func show_status_item() {
     objc_setAssociatedObject(app, "mouseTracker", mouseTracker, .OBJC_ASSOCIATION_RETAIN)
 
     print("Starting application run loop...")
+    print("Calling init_notch")
+    assert(init_notch_path(), "Setting notch path failed")
+
     app.run()
 }
